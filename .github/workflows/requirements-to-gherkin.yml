@@ -1,0 +1,29 @@
+name: Jira requirements to Gherkin
+on:
+  workflow_dispatch:
+    inputs:
+      jira_label: { description: Jira label, required: true, default: ai-test-ready }
+permissions: { contents: write, pull-requests: write }
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    environment: gherkin-approval
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install requests
+      - name: Fetch Jira requirements
+        env: { JIRA_BASE_URL: '${{ secrets.JIRA_BASE_URL }}', JIRA_EMAIL: '${{ secrets.JIRA_EMAIL }}', JIRA_API_TOKEN: '${{ secrets.JIRA_API_TOKEN }}' }
+        run: python scripts/jira_fetch.py --label "${{ inputs.jira_label }}" --out jira-issues.json
+      - name: Generate Gherkin
+        env: { AI_BASE_URL: '${{ vars.AI_BASE_URL }}', AI_API_KEY: '${{ secrets.AI_API_KEY }}', AI_MODEL: '${{ vars.AI_MODEL }}' }
+        run: python scripts/generate_gherkin.py --input jira-issues.json --output features/pending
+      - uses: actions/upload-artifact@v4
+        with: { name: pending-gherkin, path: features/pending }
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: ai/gherkin-${{ github.run_id }}
+          title: 'test: approve AI-generated Gherkin scenarios'
+          body: 'Manually validate rules, scenarios and data tables before merge. Move approved files to features/approved.'
+          commit-message: 'test: add generated Gherkin for approval'
