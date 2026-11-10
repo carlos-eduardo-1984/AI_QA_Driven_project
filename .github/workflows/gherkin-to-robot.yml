@@ -1,0 +1,21 @@
+name: Approved Gherkin to Robot Framework
+on:
+  workflow_dispatch:
+  push: { branches: [main], paths: ['features/approved/**'] }
+permissions: { contents: write, pull-requests: write }
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install requests
+      - name: Generate Robot suites
+        env: { AI_BASE_URL: '${{ vars.AI_BASE_URL }}', AI_API_KEY: '${{ secrets.AI_API_KEY }}', AI_MODEL: '${{ vars.AI_MODEL }}' }
+        run: python scripts/generate_robot.py --features features/approved --output tests/generated
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: ai/robot-${{ github.run_id }}
+          title: 'test: review generated Robot Framework tests'
+          commit-message: 'test: generate Robot suites from approved Gherkin'
