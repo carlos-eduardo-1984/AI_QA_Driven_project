@@ -1,0 +1,3 @@
+/.github/ @qa-leads
+/features/approved/ @product-owners @qa-leads
+/tests/ @qa-leads

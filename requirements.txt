@@ -1,0 +1,4 @@
+robotframework==7.1.1
+robotframework-browser==19.4.0
+robotframework-requests==0.9.7
+requests==2.32.3
