@@ -1,0 +1,20 @@
+name: Reusable quality gate
+on:
+  workflow_call:
+    inputs:
+      metrics_artifact: { type: string, default: robot-reports-integration }
+      min_pass_rate: { type: number, default: 95 }
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: '${{ inputs.metrics_artifact }}', path: results }
+      - name: Robot quality gate
+        env: { MIN_PASS_RATE: '${{ inputs.min_pass_rate }}', MAX_CRITICAL_FAILURES: '0' }
+        run: python scripts/quality_gate.py results/metrics.json
+      - name: SonarQube scan
+        if: ${{ secrets.SONAR_TOKEN != '' }}
+        uses: sonarsource/sonarqube-scan-action@v5
+        env: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}', SONAR_HOST_URL: '${{ secrets.SONAR_HOST_URL }}' }
