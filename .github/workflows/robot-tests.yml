@@ -3,8 +3,8 @@ on:
   workflow_dispatch:
     inputs:
       environment: { type: choice, options: [integration, test], default: integration }
-  pull_request:
-  push: { branches: [main] }
+  # pull_request:
+  # push: { branches: [main] }
 permissions: { contents: read, checks: write }
 jobs:
   test:
