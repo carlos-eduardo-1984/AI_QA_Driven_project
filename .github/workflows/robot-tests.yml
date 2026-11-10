@@ -38,7 +38,10 @@ jobs:
           python scripts/github_summary.py results/metrics.json
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: robot-reports-${{ inputs.environment || 'integration' }}, path: results/, retention-days: 30 }
-      - name: Quality gate
+        with: 
+          name: robot-reports-${{ inputs.environment }}
+          path: results/ 
+          retention-days: 30 
+      - name:  Quality gate
         if: always()
-        run: python scripts/quality_gate.py results/metrics.json
+        run:  python scripts/quality_gate.py results/metrics.json
