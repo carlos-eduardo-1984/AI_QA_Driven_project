@@ -1,0 +1,44 @@
+name: Robot Framework tests
+on:
+  workflow_dispatch:
+    inputs:
+      environment: { type: choice, options: [integration, test], default: integration }
+  pull_request:
+  push: { branches: [main] }
+permissions: { contents: read, checks: write }
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'integration' }}
+    env:
+      MIN_PASS_RATE: ${{ vars.MIN_PASS_RATE || '95' }}
+      MAX_CRITICAL_FAILURES: ${{ vars.MAX_CRITICAL_FAILURES || '0' }}
+      TEST_USER: ${{ secrets.TEST_USER }}
+      TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+      INTEGRATION_WEB_BASE_URL: ${{ vars.INTEGRATION_WEB_BASE_URL }}
+      INTEGRATION_API_BASE_URL: ${{ vars.INTEGRATION_API_BASE_URL }}
+      TEST_WEB_BASE_URL: ${{ vars.TEST_WEB_BASE_URL }}
+      TEST_API_BASE_URL: ${{ vars.TEST_API_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: pip }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: pip install -r requirements.txt
+      - run: rfbrowser init
+      - name: Run tests
+        continue-on-error: true
+        run: robot --variablefile config/environments/${{ inputs.environment || 'integration' }}.py --outputdir results tests
+      - name: Metrics, dashboard and summary
+        if: always()
+        run: |
+          python scripts/metrics.py results/output.xml results/metrics.json
+          python scripts/dashboard.py results/metrics.json results/dashboard.html
+          python scripts/github_summary.py results/metrics.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: robot-reports-${{ inputs.environment || 'integration' }}, path: results/, retention-days: 30 }
+      - name: Quality gate
+        if: always()
+        run: python scripts/quality_gate.py results/metrics.json
